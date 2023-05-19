@@ -3,6 +3,7 @@
 
 int c_get_index(const char *table, const char *valueText);
 float c_pull(const char *table, int index);
+char *c_pull_str(const char *table, int index);
 int c_push(const char *table, int index, float value);
 
 int connect_sock();

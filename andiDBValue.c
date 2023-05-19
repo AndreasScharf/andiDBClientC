@@ -105,12 +105,29 @@ Value_get(CustomObject *self, PyObject *Py_UNUSED(ignored))
     float value = c_pull( PyUnicode_AsUTF8(self->table) , self->index);
     return Py_BuildValue("f", value);
 }
+static PyObject *
+Value_getString(CustomObject *self, PyObject *Py_UNUSED(ignored) )
+{
+    if (self->table == NULL)
+    {
+        PyErr_SetString(PyExc_AttributeError, "table");
+        return NULL;
+    }
+    if (self->index < 0)
+    {
+        PyErr_SetString(PyExc_AttributeError, "index");
+        return NULL;
+    }
+
+    char * value = c_pull_str(PyUnicode_AsUTF8(self->table), self->index);
+    return Py_BuildValue("s", value);
+}
 
 static PyObject *
 Value_set(CustomObject *self, PyObject *args)
 {
     float value;
-    if (!PyArg_ParseTuple(args, "f",&value))
+    if (!PyArg_ParseTuple(args, "f", &value))
     {
         printf("wrong Parameters");
         return Py_BuildValue("i", -1);
@@ -133,6 +150,8 @@ Value_set(CustomObject *self, PyObject *args)
 
 static PyMethodDef Value_methods[] = {
     {"get", (PyCFunction)Value_get, METH_NOARGS, "Getting Module Connected value from andiDB"},
+    {"getString", (PyCFunction)Value_getString, METH_NOARGS, "Getting Module Connected value from andiDB"},
+
     {"set", (PyCFunction)Value_set, METH_VARARGS, "Setting Module Connected value to andiDB"},
 
     {NULL} /* Sentinel */

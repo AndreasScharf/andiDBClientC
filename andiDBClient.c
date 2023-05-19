@@ -3,6 +3,9 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
+//new line
+#include <stdio.h>
 
 #include "andiDBClient.h"
 
@@ -135,7 +138,41 @@ float c_pull(const char *table, int index){
     }
 
     free(response);
-    return (float)strtod(chunks, NULL);
+    char * remainingString;
+    return (float)strtod(chunks, &remainingString);
+}
+char *c_pull_str(const char *table, int index){
+    while (!is_connected())
+    {
+        connect_sock();
+    }
+    const int buffSize = snprintf(NULL, 0, "PUSH;%s;%i\n", table, index); // caculate the size of bufferstring
+    char *msg = malloc(buffSize + 1);                                     // make dynamic
+    sprintf(msg, "PULL;%s;%i\n", table, index);
+    send(sock, msg, strlen(msg), 0); // Send pull Message
+    free(msg);
+    // Wait for response
+
+    char *response = malloc(128);
+
+    int valread = read(sock, response, 128);
+    int slicer_count = countChar(response, ';');
+
+    char *chunks = strtok(response, ";");
+
+    for (int i = 0; i < slicer_count; i++)
+    {
+        chunks = strtok(NULL, ";");
+    }
+    char *ptr;
+    ptr = strchr(chunks, '\n');
+    if (ptr != NULL)
+    {
+        *ptr = '\0';
+    }
+
+    free(response);
+    return chunks;
 }
 
 static PyObject *get_index(PyObject *self, PyObject *args)
