@@ -1,9 +1,10 @@
 import andiDB
 import time
-value = andiDB.value("maschine_values", "Betrieb Anlage")
+value = andiDB.value("input_values", "RPS 1 pressure")
 value.set(1337)
 ts = time.time()
-for i in range(60):
+while 1:
     b = value.get()
+    print(b)
     
 print(time.time() - ts)

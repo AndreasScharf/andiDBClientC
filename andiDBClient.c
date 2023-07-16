@@ -9,6 +9,7 @@
 
 #include "andiDBClient.h"
 
+#define ADDRESS "127.0.0.1"
 #define PORT 1337
 //delace functions
 
@@ -25,7 +26,7 @@ int connect_sock(){
     }
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(PORT);
-    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0)
+    if (inet_pton(AF_INET, ADDRESS, &serv_addr.sin_addr) <= 0)
     {
         return -1;
     }
@@ -69,6 +70,30 @@ void split_str(const char *str, char *buffer, char* token)
 
     return;
 }
+// check response 
+// checks if response start with starting string
+// treads anwser as potently dangorus 
+int checkResponse(char * anwser, char * starting){
+    if(anwser == NULL)
+        return 0;
+
+    int anwser_length = strlen(anwser);
+    int starting_length = strlen(starting);
+
+    for (int i = 0; i < anwser_length; i++){
+        // when i has the size of the starting string this meas every thing went perfect
+        if (i >= starting_length)
+            return 1;
+
+        char aC = anwser[i];
+        char sC = starting[i];
+        if(aC != sC)// if there a not the same response is not valid
+            return 0;
+    }
+    return 0;
+}
+
+
 
 // Push Methods these are for Setting Values in Python Interpreter and C Code 
 
@@ -126,20 +151,35 @@ float c_pull(const char *table, int index){
     //Wait for response
 
     char *response = malloc(128);
+    int valread = read(sock, response, 128);//read from socket buffer
+    int responseValid = checkResponse(response, "PULLBACK");
+    if(!responseValid)// edge case when server is not availible
+        return 0.0f;
 
-    int valread = read(sock, response, 128);
-    int slicer_count = countChar(response, ';');
+    int slicer_count = countChar(response, ';'); // calculate how much chunks anwser has
 
-    char *chunks = strtok(response, ";");
+    char *chunks = strtok(response, ";");// slice anwser into chunks
 
     for (int i = 0; i < slicer_count; i++)
     {
         chunks = strtok(NULL, ";");
     }
+    char * remainingString; //empty string for the overlap of the float
 
-    free(response);
-    char * remainingString;
-    return (float)strtod(chunks, &remainingString);
+    float returningValue = 0.0f; // declare variable as 0
+
+    // CGPT suggest i trie to check if chunks is NULL
+    // maybe when terminating the program and returing an unfinished message it can not find ; in the awnser
+    if(chunks != NULL)
+        returningValue = (float)strtod(chunks, &remainingString);// convert and save value in floating variable
+
+    if (chunks == remainingString){
+        printf('Someting went wrong %s %s', chunks, remainingString);
+    }
+
+    free(response);//then free response and all connected memorys
+
+    return returningValue;// return saved floating value 
 }
 char *c_pull_str(const char *table, int index){
     while (!is_connected())
@@ -156,6 +196,9 @@ char *c_pull_str(const char *table, int index){
     char *response = malloc(128);
 
     int valread = read(sock, response, 128);
+    int responseValid = checkResponse(response, "PULLBACK");
+    if (!responseValid) // edge case when server is not availible
+        return "";
     int slicer_count = countChar(response, ';');
 
     char *chunks = strtok(response, ";");
@@ -205,6 +248,9 @@ int c_get_index(const char *table, const char *valueText){
     char *response = malloc(128);
 
     int valread = read(sock, response, 128);
+    int responseValid = checkResponse(response, "INDEXBACK");
+    if (!responseValid) // edge case when server is not availible
+        return -1;
     int slicer_count = countChar(response, ';');
 
     char *chunks = strtok(response, ";");
